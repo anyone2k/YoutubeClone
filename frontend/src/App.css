@@ -1,0 +1,39 @@
+.App {
+  text-align: center;
+  color:black;
+}
+
+.header{
+  overflow: hidden;
+  padding: 20px 10px;
+  background-color: grey;
+
+}
+.header a{
+  text-decoration: none;
+  float:left;
+  padding: 5px;
+  color: black;
+}
+.header a:hover{
+  color:white;
+}
+.header ul{
+  float: right;
+  list-style-type: none;
+  margin:0;
+  padding: 0;
+}
+.header li{
+  display: inline;
+}
+.header ul li a{
+  display: block;
+}
+.logo a{
+  color: white;
+  background-color: black;
+  border-style: solid;
+  border-color: black;
+  border-radius: 30px;
+}
