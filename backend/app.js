@@ -5,12 +5,16 @@
 // D. Delete   DELETE  
 
 //===============================================================\\
-
+// External Imports
 const express = require('express');
 const dotenv = require("dotenv").config();
 const colors = require('colors');
-const connectDB = require('./config/db');
 var cors = require('cors');
+
+// Internal Imports
+const errorHandler = require('./middleware/error');
+const connectDB = require('./config/db');
+
 
 // Connecting the datebase
 connectDB();
@@ -40,6 +44,8 @@ app.use(express.json());
 app.use('/auth', routesauth);
 app.use('/videos', routesvideos);
 
+
+app.use(errorHandler);
 
 
 

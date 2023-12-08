@@ -3,95 +3,111 @@ const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 // Internal Imports
 const User = require('../models/User');
+const asyncHandler = require('../middleware/async');
+const ErrorResponse = require('../utils/errorResponse');
 const SECRET_KEY = process.env.SECRET_KEY;
 
 // @desc  create login  
 // @route   post /auth/login
 // @access  public
-exports.login = async (req, res) => {
-    try {
-        const user = await User.findOne({ email: req.body.email });
-        if (!user) {
-            return res.status(400).send({ error: 'Utilisateur non trouvé' });
-        }
+exports.login = asyncHandler( async (req, res, next) => {
 
-        const validPassword = await bcrypt.compare(req.body.password, user.password);
-        if (!validPassword) {
-            return res.status(400).send({ error: 'Mot de passe incorrect' });
+        const {email, password} = req.body || {};
+        
+        const user = await User.findOne({ 'email': email });
+        
+        if (user) {
+            const validPassword = bcrypt.compare(password, user.password);
+            if (!validPassword) {
+            return res
+                    .status(401)
+                    .send({'success' : false, 'msg' : 'Email or Password incorrect.'});
+            }else{
+                const token = jwt.sign({ id: user._id }, SECRET_KEY, { expiresIn: '30d' });
+          
+                return res
+                        .status(200)
+                        .send({ 'success' : true, 'Token' : token });
+            }
+        }else{
+            return res
+                    .status(401)
+                    .send({'success' : false, 'msg' : 'Email or Password incorrect.'});
         }
-
-        const token = jwt.sign({ id: user._id }, SECRET_KEY, { expiresIn: '30d' });
-        res.send({ token });
-    } catch (err) {
-        res.status(400).send({ error: 'Échec de la connexion' });
-    }
-};
+    // } catch (err) {
+    //         res
+    //           .status(400)
+    //           .send({ 'success' : false, 'msg' : 'Missing or invalide parameters' });
+    // }
+});
 
 // @desc  create register  
 // @route   post /auth/register
 // @access  public
 
 
-exports.signUp = async (req, res) => {
-    try {
-        const hashedPassword = await bcrypt.hash(req.body.password, 10);
-        const user = new User({ name: req.body.name, email: req.body.email, password: hashedPassword });
-        await user.save();
-        res.status(201).send({ message: 'Utilisateur créé avec succès' });
-    } catch (err) {
-        res.status(400).send({
-            error: "Échec de la création de l'utilisateur"
-        });
-    }
-};
+exports.signUp = asyncHandler( async (req, res, next) => {
+
+        const {  name ,email, password } = req.body;
+
+        const user = await User.findOne({'email': email});
+
+        if(!user){
+            const hashedPassword = await bcrypt.hash(password, 10);
+
+            const user = new User({ 'name': name, 
+                                    'email': email, 
+                                    'password': hashedPassword
+                                });
+
+                await user.save();
+
+            return res.status(201).send({ 'success' : true, message: 'Utilisateur créé avec succès' });
+        }else{
+            return res.status(409).send({'success' : false, 'msg' : 'User exists already in the database.'});
+        }
+    // } catch (err) {
+    //     return res
+    //             .status(400)
+    //             .send({'success' : false, 'msg' : 'Problem with entered parameters.'});
+    // }
+});
+
+// @desc    Logout user / clear cookie
+// @route   POST /api/users/logout
+// @access  Public
+exports.logoutUser = (req, res) => {
+    // res.cookie('jwt', '', {
+    //   httpOnly: true,
+    //   expires: new Date(0),
+    // });
+    res.status(200).json({ message: 'Logged out successfully' });
+  };
+  
 
 // @desc  delete account 
 // @route   post /auth/deleteAccount
 // @access  user Bound
 
-exports.deleteAccount = async (req, res) => {
-    try {
-        const authorizationHeader = req.header('Authorization');
-
-        if (!authorizationHeader) {
-            return res.status(401).json({ error: 'Authorization header missing' });
-        }
-
-        const token = authorizationHeader.replace('Bearer ', '');
-
-        // Gestion d'erreurs JWT
-        let decoded;
-        try {
-            decoded = jwt.verify(token, SECRET_KEY);
-        } catch (err) {
-            console.log("Erreur lors de la vérification du token:", err);
-            return res.status(401).json({ error: 'Token invalide' });
-        }
-        const userId = decoded.id;
-        console.log("ID de l'utilisateur décodé:", userId);
-
+exports.deleteAccount = asyncHandler( async (req, res, next) => {
+  
         // Récupération et vérification de l'utilisateur
-        const user = await User.findById(userId);
-        console.log("Utilisateur trouvé:", user);
-        if (!user) {
-            return res.status(404).json({ error: 'Utilisateur non trouvé' });
-        }
+         const user = await User.findById(req.id);
+         // Vérification du mot de passe
+         const validPassword = bcrypt.compare(req.body.password, user.password);
+         if (!validPassword) {
+             return res.status(400).json({ 'success' : false, 'msg' : 'Mot de passe incorrect.' });
+         }
 
-        // Vérification du mot de passe
-        const validPassword = await bcrypt.compare(req.body.password, user.password);
-        if (!validPassword) {
-            return res.status(400).json({ error: 'Mot de passe incorrect.' });
-        }
+         // Suppression de l'utilisateur
+         await User.findByIdAndDelete(req.id);
+         console.log("Utilisateur supprimé avec succès.");
 
-        // Suppression de l'utilisateur
-        await User.findByIdAndDelete(userId);
-        console.log("Utilisateur supprimé avec succès.");
+        res.status(200).json({ 'success' : true, 'msg' : 'Compte supprimé avec succès.' });
+    // } catch (error) {
+    //     console.log("Erreur lors de la suppression du compte:", error);
+    //     res.status(500).json({ error: 'Erreur lors de la suppression du compte.' });
+    // }
 
-        res.status(200).json({ message: 'Compte supprimé avec succès.' });
-    } catch (error) {
-        console.log("Erreur lors de la suppression du compte:", error);
-        res.status(500).json({ error: 'Erreur lors de la suppression du compte.' });
-    }
-
-};
+});
 
