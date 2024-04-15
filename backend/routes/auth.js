@@ -4,6 +4,7 @@ const express = require('express');
 const {
     login, 
     signUp,
+    logoutUser,
     deleteAccount
 } = require('../controllers/auth');
 
@@ -18,6 +19,10 @@ router
 router
     .route('/register')
     .post(signUp);
+
+router
+    .route('/logout')
+    .post(logoutUser);
 
 router
     .route('/deleteAccount')

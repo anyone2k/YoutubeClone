@@ -16,9 +16,10 @@ const VideoSchema = new mongoose.Schema({
         type: String, 
         required: true 
     }, // URL de la vidéo
-    user: { 
+    userId: { 
         type: mongoose.Schema.Types.ObjectId, 
-        ref: 'User' 
+        ref: 'User',
+        required:true
     } // Référence à l'utilisateur qui a posté la vidéo
 });
 

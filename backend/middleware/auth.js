@@ -3,12 +3,14 @@ const jwt = require('jsonwebtoken');
 
 // Internal imports
 const User = require('../models/User');
+const SECRET_KEY = process.env.SECRET_KEY;
 
 exports.protect = (req, res, next) => {
     try{
     let token = req.headers.authorization;
-
+    
     if(token === undefined){
+        
         return res.status(401).send('Not authorized to access this route / Invalid Token');
     }
     
@@ -17,11 +19,12 @@ exports.protect = (req, res, next) => {
     }
 
     token = token.split(' ')[1];
-    const tokenDecoded = jwt.verify(token, '52e4d52f23d204d418ad64c33c095051b2430322a2a47d8b378aede350661a21bf0c3c33991a998ff5314bc053d3ce66')
+    const tokenDecoded = jwt.verify(token, SECRET_KEY);
     
     req.id = tokenDecoded.id;
     
     if(User.find(req.id) === null){
+        
         return res.status(401).send('Not authorized to access this route / Invalid Token');
     }
     next();
